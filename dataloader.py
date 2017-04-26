@@ -1,5 +1,5 @@
 import numpy as np
-
+import pickle
 
 class Gen_Data_loader():
     def __init__(self, batch_size):
@@ -8,13 +8,8 @@ class Gen_Data_loader():
 
     def create_batches(self, data_file):
         self.token_stream = []
-        with open(data_file, 'r') as f:
-            for line in f:
-                line = line.strip()
-                line = line.split()
-                parse_line = [int(x) for x in line]
-                if len(parse_line) == 20:
-                    self.token_stream.append(parse_line)
+        with open(data_file, 'r') as output_file:
+            self.token_stream = pickle.load(output_file)
 
         self.num_batch = int(len(self.token_stream) / self.batch_size)
         self.token_stream = self.token_stream[:self.num_batch * self.batch_size]
@@ -40,19 +35,12 @@ class Dis_dataloader():
         # Load data
         positive_examples = []
         negative_examples = []
-        with open(positive_file)as fin:
-            for line in fin:
-                line = line.strip()
-                line = line.split()
-                parse_line = [int(x) for x in line]
-                positive_examples.append(parse_line)
-        with open(negative_file)as fin:
-            for line in fin:
-                line = line.strip()
-                line = line.split()
-                parse_line = [int(x) for x in line]
-                if len(parse_line) == 20:
-                    negative_examples.append(parse_line)
+        with open(positive_file, "rb")as output_file:
+            positive_examples = pickle.load(output_file)
+
+        with open(negative_file, "rb")as output_file:
+            negative_examples = pickle.load(output_file)
+
         self.sentences = np.array(positive_examples + negative_examples)
 
         # Generate labels
