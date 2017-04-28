@@ -1,3 +1,4 @@
 save/*.*
 *.mid
 *.pkl
+*.pyc
