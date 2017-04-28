@@ -33,8 +33,6 @@ class Dis_dataloader():
 
     def load_train_data(self, positive_file, negative_file):
         # Load data
-        positive_examples = []
-        negative_examples = []
         with open(positive_file, "rb")as output_file:
             positive_examples = pickle.load(output_file)
 
