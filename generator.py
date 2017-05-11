@@ -49,6 +49,7 @@ class Generator(object):
             o_t = self.g_output_unit(h_t)  # batch x vocab , logits not prob
             log_prob = tf.log(tf.nn.softmax(o_t))
             next_token = tf.cast(tf.reshape(tf.multinomial(log_prob, 1), [self.batch_size]), tf.int32)
+
             x_tp1 = tf.nn.embedding_lookup(self.g_embeddings, next_token)  # batch x emb_dim
             gen_o = gen_o.write(i, tf.reduce_sum(tf.multiply(tf.one_hot(next_token, self.num_emb, 1.0, 0.0),
                                                              tf.nn.softmax(o_t)), 1))  # [batch_size] , prob
@@ -72,6 +73,7 @@ class Generator(object):
         ta_emb_x = tensor_array_ops.TensorArray(
             dtype=tf.float32, size=self.sequence_length)
         ta_emb_x = ta_emb_x.unstack(self.processed_x)
+
 
         def _pretrain_recurrence(i, x_t, h_tm1, g_predictions):
             h_t = self.g_recurrent_unit(x_t, h_tm1)
