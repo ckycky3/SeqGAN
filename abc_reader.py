@@ -33,7 +33,9 @@ class ABC_Reader:
         sorted_vals = np.asarray(sorted_vals)
         note_info = pd.DataFrame(data = sorted_vals, columns=['note'])
         print len(unique_chars)
+        # print note_info
         print note_info[note_info['note'] == 'M']
+        # print note_info[note_info['note'] == 'X']
 
         self.note_info_dict = note_info['note'].to_dict()
         self.note_info_dict_swap = dict((y, x) for x, y in self.note_info_dict.iteritems())
