@@ -1,11 +1,16 @@
 import tensorflow as tf
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
 import numpy as np
+import abc2midi.abc_errorcheck as abc_errorcheck
+from abc_reader import ABC_Reader
+import os
+import re
 
 
 class ROLLOUT(object):
-    def __init__(self, lstm, update_rate):
+    def __init__(self, lstm, ABC_Reader, update_rate):
         self.lstm = lstm
+        self.ABC_Reader = ABC_Reader
         self.update_rate = update_rate
 
         self.num_emb = self.lstm.num_emb
@@ -74,28 +79,44 @@ class ROLLOUT(object):
         self.gen_x = self.gen_x.stack()  # seq_length x batch_size
         self.gen_x = tf.transpose(self.gen_x, perm=[1, 0])  # batch_size x seq_length
 
-    def get_reward(self, sess, input_x, rollout_num, discriminator):
+    def get_reward(self, sess, input_x, rollout_num):
         rewards = []
+        abc2midi_path = os.path.join('abc2midi', 'bin', 'abc2midi')
         for i in range(rollout_num):
             for given_num in range(1, 64):
                 feed = {self.x: input_x, self.given_num: given_num}
                 samples = sess.run(self.gen_x, feed)
-                feed = {discriminator.input_x: samples, discriminator.dropout_keep_prob: 1.0}
-                ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
-                ypred = np.array([item[1] for item in ypred_for_auc])
+                # TODO: Modify get_reward
+                # feed = {discriminator.input_x: samples, discriminator.dropout_keep_prob: 1.0}
+                # ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
+                # ypred = np.array([item[1] for item in ypred_for_auc])
+                decode_samples = self.ABC_Reader.trans_trans_songs_to_raw(samples)
+                reward = 0
+                for sample in decode_samples:
+                    # print "-------------Sample---------------"
+                    # print sample
+                    has_error = self.error_check(sample, abc2midi_path)
+                    if not has_error:
+                        reward += 1
                 if i == 0:
-                    rewards.append(ypred)
+                    rewards.append(reward)
                 else:
-                    rewards[given_num - 1] += ypred
+                    rewards[given_num - 1] += reward
 
             # the last token reward
-            feed = {discriminator.input_x: input_x, discriminator.dropout_keep_prob: 1.0}
-            ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
-            ypred = np.array([item[1] for item in ypred_for_auc])
+            # feed = {discriminator.input_x: input_x, discriminator.dropout_keep_prob: 1.0}
+            # ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
+            # ypred = np.array([item[1] for item in ypred_for_auc])
+            decode_samples = self.ABC_Reader.trans_trans_songs_to_raw(input_x)
+            reward = 0
+            for sample in decode_samples:
+                has_error = self.error_check(sample, abc2midi_path)
+                if not has_error:
+                    reward += 1
             if i == 0:
-                rewards.append(ypred)
+                rewards.append(reward)
             else:
-                rewards[19] += ypred
+                rewards[19] += reward
 
         rewards = np.transpose(np.array(rewards)) / (1.0 * rollout_num)  # batch_size x seq_length
         return rewards
@@ -240,3 +261,34 @@ class ROLLOUT(object):
         self.g_embeddings = tf.identity(self.lstm.g_embeddings)
         self.g_recurrent_unit = self.update_recurrent_unit()
         self.g_output_unit = self.update_output_unit()
+
+    def error_check(self, sample, abc2midi_path):
+        abc = self.sample_to_abc(sample)
+        print "---------------------abc---------------------"
+        print abc
+        message = abc_errorcheck.AbcCheck(abc_code=abc, header='', abc2midi_path=abc2midi_path)
+        lines = re.split('\r\n|\r|\n', message)
+        err_cnt = 0
+        wrn_cnt = 0
+        for i in range(len(lines)):
+            if lines[i].startswith('Error'):
+                if "No R: in header, cannot apply Barfly model" in lines[i]:
+                    continue
+                else:
+                    print lines[i]
+                    err_cnt += 1
+            elif lines[i].startswith('Warning'):
+                print lines[i]
+                wrn_cnt += 1
+        print err_cnt, " Errors, ", wrn_cnt, " Warnings"
+        if err_cnt==0 and wrn_cnt==0:
+            return False
+        else:
+            return True
+
+    def sample_to_abc(self, sample):
+        string = '''X: 1
+'''
+        for char in sample:
+            string += char
+        return string
