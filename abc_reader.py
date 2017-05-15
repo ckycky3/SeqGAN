@@ -8,8 +8,8 @@ class ABC_Reader:
     def __init__(self):
         self.note_info_path = 'abc_mapping_dict.pkl'
         self.midi_training_path_trans = "save/abc_trans.pkl"
-        # SINGLE_CHAR or DISTINCT_SCALE
-        self.mode = 'SINGLE_CHAR'
+        # SINGLE_CHAR  / DISTINCT_SCALE / GUITAR_CODE
+        self.mode = 'DISTINCT_SCALE'
 
     def preprocess(self):
 
@@ -36,7 +36,7 @@ class ABC_Reader:
         for scale in lower_scales:
             scales_extended.append(scale+lower_postfix)
 
-        sharp_flat_prefix = ['^','_']
+        sharp_flat_prefix = ['^','_','=']
         sharp_flatten_scales = []
         for prefix in sharp_flat_prefix:
             for scales in normal_scales+scales_extended:
@@ -56,11 +56,10 @@ class ABC_Reader:
         sorted_vals+=scales_extended
         sorted_vals+=sharp_flatten_scales
         sorted_vals = np.asarray(sorted_vals)
-        print len(sorted_vals)
+
 
         note_info = pd.DataFrame(data = sorted_vals, columns=['note'])
-        print note_info
-        print len(unique_chars)
+
         # print note_info[note_info['note'] == 'M']
 
         self.note_info_dict = note_info['note'].to_dict()
@@ -128,7 +127,6 @@ class ABC_Reader:
             pickle.dump(trans_list, output_file)
 
 
-        print trans_fh
 
 
     def list_to_char(self, list):

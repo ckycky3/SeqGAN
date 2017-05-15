@@ -17,7 +17,8 @@ EMB_DIM = 32 # embedding dimension
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
 SEQ_LENGTH = 64 # sequence length
 START_TOKEN = 48
-PRE_EPOCH_NUM = 120 # supervise (maximum likelihood estimation) epochs
+# PRE_EPOCH_NUM = 120 # supervise (maximum likelihood estimation) epochs
+PRE_EPOCH_NUM = 0 # supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 32
 
@@ -44,6 +45,8 @@ negative_file = 'target_generate/pretrain_small.pkl'
 # eval_file = 'target_generate/midi_trans_eval.pkl'
 logpath = 'log/seqgan_experimient-log1.txt'
 generated_num = 40
+
+ckpt_path = 'save/train/tmp/'
 
 melody_size = 83
 RL_update_rate = 0.8
@@ -155,7 +158,7 @@ def main():
     gen_data_loader.create_batches(positive_file)
 
     log = open('save/experiment-log.txt', 'w')
-    #  pre-train generator
+     # pre-train generator
     print 'Start pre-training...'
     log.write('pre-training...\n')
     for epoch in xrange(PRE_EPOCH_NUM):
@@ -171,8 +174,12 @@ def main():
             buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(test_loss) + '\n'
             log.write(buffer)
 
-    print 'Start pre-training discriminator...'
-    # Train 3 epoch on the generated data and do this for 50 times
+    generator.save_variables(sess, ckpt_path)
+
+    generator.restore_variables(sess, ckpt_path)
+
+    # print 'Start pre-training discriminator...'
+    # # Train 3 epoch on the generated data and do this for 50 times
     # for _ in range(50):
     #     generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
     #     dis_data_loader.load_train_data(positive_file, negative_file)
@@ -186,7 +193,8 @@ def main():
     #                 discriminator.dropout_keep_prob: dis_dropout_keep_prob
     #             }
     #             _ = sess.run(discriminator.train_op, feed)
-    #
+
+
     rollout = ROLLOUT(generator, ABC_READER, 0.8)
 
     print '#########################################################################'

@@ -123,6 +123,15 @@ class Generator(object):
         outputs = sess.run(self.gen_x)
         return outputs
 
+    def save_variables(self, sess, path):
+        saver = tf.train.Saver()
+        saver.save(sess, path)
+
+    def restore_variables(self, sess, path):
+        saver = tf.train.Saver()
+        saver.restore(sess, path)
+
+
     def pretrain_step(self, sess, x):
         outputs = sess.run([self.pretrain_updates, self.pretrain_loss], feed_dict={self.x: x})
         return outputs
