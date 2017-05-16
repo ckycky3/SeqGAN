@@ -26,7 +26,7 @@ class ABC_Reader:
 
         fh = open('abc/mnt_converted.txt').read()
 
-        print fh
+        # print fh
         unique_chars = set(fh)
         length = 64
         sorted_vals = map(str, unique_chars)
