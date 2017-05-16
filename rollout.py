@@ -93,13 +93,13 @@ class ROLLOUT(object):
                 # ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
                 # ypred = np.array([item[1] for item in ypred_for_auc])
                 decode_samples = self.ABC_Reader.trans_trans_songs_to_raw(samples)
-                reward = 0
+                error_list = []
                 for sample in decode_samples:
                     # print "-------------Sample---------------"
                     # print sample
-                    has_error = self.error_check(sample, abc2midi_path, header)
-                    if not has_error:
-                        reward += 1
+                    has_error = self.error_check(sample, abc2midi_path, header, False)
+                    error_list.append(has_error)
+                    reward = np.array([0 if error else 1 for error in error_list])
                 if i == 0:
                     rewards.append(reward)
                 else:
@@ -110,11 +110,11 @@ class ROLLOUT(object):
             # ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
             # ypred = np.array([item[1] for item in ypred_for_auc])
             decode_samples = self.ABC_Reader.trans_trans_songs_to_raw(input_x)
-            reward = 0
+            error_list = []
             for sample in decode_samples:
-                has_error = self.error_check(sample, abc2midi_path, header)
-                if not has_error:
-                    reward += 1
+                has_error = self.error_check(sample, abc2midi_path, header, True)
+                error_list.append(has_error)
+                reward = np.array([0 if error else 1 for error in error_list])
             if i == 0:
                 rewards.append(reward)
             else:
@@ -264,10 +264,11 @@ class ROLLOUT(object):
         self.g_recurrent_unit = self.update_recurrent_unit()
         self.g_output_unit = self.update_output_unit()
 
-    def error_check(self, sample, abc2midi_path, header):
+    def error_check(self, sample, abc2midi_path, header, show):
         abc = self.sample_to_abc(sample)
-        print "---------------------abc---------------------"
-        print abc
+        if show:
+            print "---------------------abc---------------------"
+            print abc
         message = abc_errorcheck.AbcCheck(abc_code=abc, header=header, abc2midi_path=abc2midi_path)
         lines = re.split('\r\n|\r|\n', message)
         err_cnt = 0
@@ -277,12 +278,15 @@ class ROLLOUT(object):
                 if "No R: in header, cannot apply Barfly model" in lines[i]:
                     continue
                 else:
-                    print lines[i]
+                    if show:
+                        print lines[i]
                     err_cnt += 1
             elif lines[i].startswith('Warning'):
-                print lines[i]
+                if show:
+                    print lines[i]
                 wrn_cnt += 1
-        print err_cnt, " Errors, ", wrn_cnt, " Warnings"
+        if show:
+            print err_cnt, " Errors, ", wrn_cnt, " Warnings"
         if err_cnt==0 and wrn_cnt==0:
             return False
         else:
