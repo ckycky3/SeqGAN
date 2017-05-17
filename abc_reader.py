@@ -2,18 +2,21 @@ import numpy as np
 import pandas as pd
 import pickle
 import re
+from collections import OrderedDict
 
 class ABC_Reader:
 
     def __init__(self):
         self.note_info_path = 'abc_mapping_dict.pkl'
         self.midi_training_path_trans = "save/abc_trans.pkl"
-        # SINGLE_CHAR  / DISTINCT_SCALE / GUITAR_CODE
-        self.mode = 'DISTINCT_SCALE'
+        # SINGLE_CHAR  / DISTINCT_SCALE / GUITAR_CHORD
+        self.mode = 'GUITAR_CHORD'
+        self.window_length = 64
 
     def preprocess(self):
-
-        bad_words=['T:','%','X:','S:','A:','B:','C:','D:','F:','G:','H:','I:','O:','r:','U:','W:','w:','Z:']
+        # bad_words=['T:','%','X:','S:','A:','B:','C:','D:','F:','G:','H:','I:','O:','r:','U:','W:','w:','Z:']
+        bad_words = ['T:', '%', 'X:', 'S:', 'A:', 'B:', 'C:', 'D:', 'F:', 'G:', 'H:', 'I:', 'O:', 'r:', 'U:', 'W:',
+                     'w:', 'Z:', 'M:','L:','K:','P:','N:','R:']
 
         with open('abc/mnt.txt') as oldfile, open('abc/mnt_converted.txt', 'w') as newfile:
             for line in oldfile:
@@ -46,22 +49,114 @@ class ABC_Reader:
 
         fh = open('abc/mnt_converted.txt').read()
 
-        # background_filtered = re.findall(r'\"^[\w\d].{1,2}\"',fh)
-        # background_filtered = re.findall(r'\"[A-Z0-9].{1,3}\"', fh)
-        # print background_filtered
+
+        guitar_chord_prefix = '\"'
+        guitar_chords = []
+
+        trans_fh = []
+        reschars = []
+        if self.mode == 'SINGLE_CHAR':
+            reschars = fh
+        else:
+            filter_out_list = []
+            scale_prefix = normal_scales+sharp_flat_prefix
+
+            if self.mode == 'DISTINCT_SCALE':
+                filter_out_list = scale_prefix
+            elif self.mode == 'GUITAR_CHORD':
+                filter_out_list = scale_prefix+list(guitar_chord_prefix)
+
+
+            trans_fh = []
+            char_buffer = []
+            buffer_mode = ''
+            for char in fh:
+
+                if len(char_buffer) != 0:
+                    # if string is not in dict, convert character individually
+                    # if is in dict, check for postfix
+                    char_buffer += char
+
+
+                    if buffer_mode == 'scale':
+
+                        if not self.list_to_char(char_buffer) in scales_extended+sharp_flatten_scales:
+
+                            if not (self.mode == 'GUITAR_CHORD' and char == guitar_chord_prefix):
+                                reschars += char_buffer
+                                buffer_mode = ''
+                                char_buffer = []
+                            else:
+                                reschars += char_buffer[:-1]
+                                buffer_mode = 'guitar'
+                                char_buffer = char_buffer[-1:]
+
+
+
+                        else:
+                            if len(char_buffer) == 3:
+                                if not self.list_to_char(char_buffer) in scales_extended+sharp_flatten_scales:
+                                    prev_chars = self.list_to_char(char_buffer[0:2])
+                                    new_char = self.list_to_char(char_buffer[2])
+
+                                    reschars += prev_chars
+                                    reschars += new_char
+                                    buffer_mode = ''
+
+                                    char_buffer = []
+
+                                else:
+                                    reschars += self.list_to_char(char_buffer)
+                                    buffer_mode = ''
+
+                                    char_buffer = []
+
+                    elif buffer_mode == 'guitar':
+
+                        if char == guitar_chord_prefix:
+                            chord = self.list_to_char(char_buffer)
+                            reschars += chord
+
+                            if not (chord in guitar_chords):
+                                guitar_chords.append(chord)
+
+                            buffer_mode = ''
+                            if len(chord) > 4:
+                                print chord
+
+                            char_buffer = []
+
+                else:
+                    if not self.is_char_in_list(char, filter_out_list):
+                        reschars += char
+                    else:
+                        char_buffer += char
+
+                        if self.is_char_in_list(char, scale_prefix):
+                            buffer_mode = 'scale'
+
+                        if self.mode == 'GUITAR_CHORD':
+                            if char == guitar_chord_prefix:
+                                buffer_mode = 'guitar'
+
+
 
         unique_chars = set(fh)
-        length = 64
         sorted_vals = map(str, unique_chars)
-        sorted_vals+=scales_extended
-        sorted_vals+=sharp_flatten_scales
+
+        if self.mode == 'DISTINCT_SCALE' or self.mode == 'GUITAR_CHORD':
+            sorted_vals+=scales_extended
+            sorted_vals+=sharp_flatten_scales
+
+
+
+
+
+        if self.mode == 'GUITAR_CHORD':
+            sorted_vals+=guitar_chords
+
         sorted_vals = np.asarray(sorted_vals)
-
-
         note_info = pd.DataFrame(data = sorted_vals, columns=['note'])
-
-        # print note_info[note_info['note'] == 'M']
-
         self.note_info_dict = note_info['note'].to_dict()
         self.note_info_dict_swap = dict((y, x) for x, y in self.note_info_dict.iteritems())
 
@@ -69,64 +164,20 @@ class ABC_Reader:
             pickle.dump(self.note_info_dict, openfile)
 
 
+        for char in reschars:
+            new_cha = self.note_info_dict_swap.get(char)
+            trans_fh.append(new_cha)
 
-        if self.mode == 'SINGLE_CHAR':
-            trans_fh = []
-            char_buffer = []
-            for char in fh:
-                reschars = []
-
-                if len(char_buffer) != 0:
-                    # if string is not in dict, convert character individually
-                    # if is in dict, check for postfix
-                    char_buffer += char
-
-                    if not self.list_to_char(char_buffer) in self.note_info_dict_swap.itervalues():
-                        reschars = char_buffer
-                        char_buffer = []
-                    else:
-                        if len(char_buffer) == 3:
-                            if not self.list_to_char(char_buffer) in self.note_info_dict_swap.itervalues():
-                                prev_chars = self.list_to_chat(char_buffer[0:2])
-                                new_char = self.list_to_char(char_buffer[2])
-
-                                reschars += prev_chars
-                                reschars += new_char
-                                char_buffer = []
-
-                            else:
-                                reschars = self.list_to_char(char_buffer)
-                                char_buffer = []
-
-                else:
-                    if not self.is_char_in_list(char, normal_scales + sharp_flat_prefix):
-                        reschars += char
-                    else:
-                        char_buffer += char
-
-                if not len(reschars) == 0:
-                    for char in reschars:
-                        new_cha = self.note_info_dict_swap.get(char)
-                        trans_fh.append(new_cha)
-
-        elif self.mode == 'DISTINCT_SCALE':
-            trans_fh = []
-            for char in fh:
-                trans_fh.append(self.note_info_dict_swap.get(char))
-
+        print trans_fh[:50]
 
         trans_list = []
-
         last_index = 0
-
-        while last_index + length < len(trans_fh):
-            trans_list.append(trans_fh[last_index:last_index + length])
-            last_index += length
+        while last_index + self.window_length < len(trans_fh):
+            trans_list.append(trans_fh[last_index:last_index + self.window_length])
+            last_index += self.window_length
 
         with open(self.midi_training_path_trans, "w") as output_file:
             pickle.dump(trans_list, output_file)
-
-
 
 
     def list_to_char(self, list):
@@ -169,5 +220,6 @@ class ABC_Reader:
 
 if __name__ == "__main__":
     reader = ABC_Reader()
+    reader.preprocess()
     reader.create_dict()
     # reader.trans_generated_to_midi('pretrain_epoch100')

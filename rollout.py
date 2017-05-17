@@ -86,6 +86,7 @@ class ROLLOUT(object):
             for given_num in range(1, 64):
                 feed = {self.x: input_x, self.given_num: given_num}
                 samples = sess.run(self.gen_x, feed)
+
                 # TODO: Modify get_reward
                 # feed = {discriminator.input_x: samples, discriminator.dropout_keep_prob: 1.0}
                 # ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
