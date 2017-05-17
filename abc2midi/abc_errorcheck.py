@@ -73,6 +73,7 @@ def AbcCheck(abc_code, header, abc2midi_path, play_chords=False, default_midi_pr
     #if humanize:
     #    humanize_midi(midi_file, midi_file)
     #    pass
+    # process.terminate()
     return stdout_value
 
 

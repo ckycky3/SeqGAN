@@ -82,6 +82,8 @@ class ROLLOUT(object):
     def get_reward(self, sess, input_x, rollout_num):
         rewards = []
         abc2midi_path = os.path.join('abc2midi', 'bin', 'abc2midi')
+        header = '''X:1
+'''
         for i in range(rollout_num):
             for given_num in range(1, 64):
                 feed = {self.x: input_x, self.given_num: given_num}
@@ -92,13 +94,13 @@ class ROLLOUT(object):
                 # ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
                 # ypred = np.array([item[1] for item in ypred_for_auc])
                 decode_samples = self.ABC_Reader.trans_trans_songs_to_raw(samples)
-                reward = 0
+                error_list = []
                 for sample in decode_samples:
                     # print "-------------Sample---------------"
                     # print sample
-                    has_error = self.error_check(sample, abc2midi_path)
-                    if not has_error:
-                        reward += 1
+                    has_error = self.error_check(sample, abc2midi_path, header, False)
+                    error_list.append(has_error)
+                    reward = np.array([0 if error else 1 for error in error_list])
                 if i == 0:
                     rewards.append(reward)
                 else:
@@ -109,15 +111,15 @@ class ROLLOUT(object):
             # ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
             # ypred = np.array([item[1] for item in ypred_for_auc])
             decode_samples = self.ABC_Reader.trans_trans_songs_to_raw(input_x)
-            reward = 0
+            error_list = []
             for sample in decode_samples:
-                has_error = self.error_check(sample, abc2midi_path)
-                if not has_error:
-                    reward += 1
+                has_error = self.error_check(sample, abc2midi_path, header, True)
+                error_list.append(has_error)
+                reward = np.array([0 if error else 1 for error in error_list])
             if i == 0:
                 rewards.append(reward)
             else:
-                rewards[19] += reward
+                rewards[63] += reward
 
         rewards = np.transpose(np.array(rewards)) / (1.0 * rollout_num)  # batch_size x seq_length
         return rewards
@@ -263,11 +265,12 @@ class ROLLOUT(object):
         self.g_recurrent_unit = self.update_recurrent_unit()
         self.g_output_unit = self.update_output_unit()
 
-    def error_check(self, sample, abc2midi_path):
+    def error_check(self, sample, abc2midi_path, header, show):
         abc = self.sample_to_abc(sample)
-        print "---------------------abc---------------------"
-        print abc
-        message = abc_errorcheck.AbcCheck(abc_code=abc, header='', abc2midi_path=abc2midi_path)
+        if show:
+            print "---------------------abc---------------------"
+            print abc
+        message = abc_errorcheck.AbcCheck(abc_code=abc, header=header, abc2midi_path=abc2midi_path)
         lines = re.split('\r\n|\r|\n', message)
         err_cnt = 0
         wrn_cnt = 0
@@ -276,20 +279,22 @@ class ROLLOUT(object):
                 if "No R: in header, cannot apply Barfly model" in lines[i]:
                     continue
                 else:
-                    print lines[i]
+                    if show:
+                        print lines[i]
                     err_cnt += 1
             elif lines[i].startswith('Warning'):
-                print lines[i]
+                if show:
+                    print lines[i]
                 wrn_cnt += 1
-        print err_cnt, " Errors, ", wrn_cnt, " Warnings"
+        if show:
+            print err_cnt, " Errors, ", wrn_cnt, " Warnings"
         if err_cnt==0 and wrn_cnt==0:
             return False
         else:
             return True
 
     def sample_to_abc(self, sample):
-        string = '''X: 1
-'''
+        string = ''
         for char in sample:
             string += char
         return string

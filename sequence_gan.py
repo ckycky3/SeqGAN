@@ -210,7 +210,7 @@ def main():
 
         # Test
         if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
-            file_name = 'target_generate/pretrain_epoch' + str(epoch) + '.pkl'
+            file_name = 'target_generate/pretrain_epoch' + str(total_batch) + '.pkl'
             generate_samples(sess, generator, BATCH_SIZE, generated_num, file_name)
             likelihood_data_loader.create_batches(file_name)
             test_loss = target_loss(sess, generator, likelihood_data_loader)
