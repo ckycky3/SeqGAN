@@ -1,4 +1,4 @@
-save/*.*
+save/train/*.*
 *.mid
 *.pkl
 *.pyc

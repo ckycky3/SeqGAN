@@ -10,7 +10,7 @@ class ABC_Reader:
         self.note_info_path = 'abc_mapping_dict.pkl'
         self.midi_training_path_trans = "save/abc_trans.pkl"
         # SINGLE_CHAR  / DISTINCT_SCALE / GUITAR_CHORD
-        self.mode = 'GUITAR_CHORD'
+        self.mode = 'SINGLE_CHAR'
         self.window_length = 64
 
     def preprocess(self):

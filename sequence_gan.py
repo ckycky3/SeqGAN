@@ -14,11 +14,11 @@ import abc_reader
 #  Generator  Hyper-parameters
 ######################################################################################
 EMB_DIM = 32 # embedding dimension
-HIDDEN_DIM = 32 # hidden state dimension of lstm cell
+HIDDEN_DIM = 320 # hidden state dimension of lstm cell # 32 -> 320
 SEQ_LENGTH = 64 # sequence length
 START_TOKEN = 48
-# PRE_EPOCH_NUM = 120 # supervise (maximum likelihood estimation) epochs
-PRE_EPOCH_NUM = 0 # supervise (maximum likelihood estimation) epochs
+PRE_EPOCH_NUM = 800 # supervise (maximum likelihood estimation) epochs
+# PRE_EPOCH_NUM = 0 # supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 32
 
@@ -46,7 +46,7 @@ negative_file = 'target_generate/pretrain_small.pkl'
 logpath = 'log/seqgan_experimient-log1.txt'
 generated_num = 40
 
-ckpt_path = 'save/train/tmp/'
+ckpt_path = 'save/train/pretrain_single_larger/'
 
 melody_size = 83
 RL_update_rate = 0.8
@@ -164,19 +164,18 @@ def main():
     for epoch in xrange(PRE_EPOCH_NUM):
         loss = pre_train_epoch(sess, generator, gen_data_loader)
 
-        if epoch % 5 == 0:
-            file_name = 'target_generate/pretrain_epoch' + str(epoch) + '.pkl'
+        if epoch % 50 == 0:
+            file_name = 'target_generate/pretrain_single_larger/pretrain_epoch' + str(epoch) + '.pkl'
             generate_samples(sess, generator, BATCH_SIZE, generated_num, file_name)
             likelihood_data_loader.create_batches(file_name)
 
-            test_loss = target_loss(sess, generator, likelihood_data_loader)
-            print 'pre-train epoch ', epoch, 'test_loss ', test_loss
-            buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(test_loss) + '\n'
+            print 'pre-train epoch ', epoch, 'test_loss ', loss
+            buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
             log.write(buffer)
 
     generator.save_variables(sess, ckpt_path)
 
-    generator.restore_variables(sess, ckpt_path)
+    # generator.restore_variables(sess, ckpt_path)
 
     # print 'Start pre-training discriminator...'
     # # Train 3 epoch on the generated data and do this for 50 times
@@ -195,31 +194,31 @@ def main():
     #             _ = sess.run(discriminator.train_op, feed)
 
 
-    rollout = ROLLOUT(generator, ABC_READER, 0.8)
-
-    print '#########################################################################'
-    print 'Start Adversarial Training...'
-    log.write('adversarial training...\n')
-    for total_batch in range(TOTAL_BATCH):
-        # Train the generator for one step
-        for it in range(1):
-            samples = generator.generate(sess)
-            rewards = rollout.get_reward(sess, samples, 2)
-            feed = {generator.x: samples, generator.rewards: rewards}
-            _ = sess.run(generator.g_updates, feed_dict=feed)
-
-        # Test
-        if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
-            file_name = 'target_generate/pretrain_epoch' + str(total_batch) + '.pkl'
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, file_name)
-            likelihood_data_loader.create_batches(file_name)
-            test_loss = target_loss(sess, generator, likelihood_data_loader)
-            buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
-            print 'total_batch: ', total_batch, 'test_loss: ', test_loss
-            log.write(buffer)
-
-        # Update roll-out parameters
-        rollout.update_params()
+    # rollout = ROLLOUT(generator, ABC_READER, 0.8)
+    #
+    # print '#########################################################################'
+    # print 'Start Adversarial Training...'
+    # log.write('adversarial training...\n')
+    # for total_batch in range(TOTAL_BATCH):
+    #     # Train the generator for one step
+    #     for it in range(1):
+    #         samples = generator.generate(sess)
+    #         rewards = rollout.get_reward(sess, samples, 2)
+    #         feed = {generator.x: samples, generator.rewards: rewards}
+    #         _ = sess.run(generator.g_updates, feed_dict=feed)
+    #
+    #     # Test
+    #     if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
+    #         file_name = 'target_generate/pretrain_epoch' + str(total_batch) + '.pkl'
+    #         generate_samples(sess, generator, BATCH_SIZE, generated_num, file_name)
+    #         likelihood_data_loader.create_batches(file_name)
+    #         test_loss = target_loss(sess, generator, likelihood_data_loader)
+    #         buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
+    #         print 'total_batch: ', total_batch, 'test_loss: ', test_loss
+    #         log.write(buffer)
+    #
+    #     # Update roll-out parameters
+    #     rollout.update_params()
 
         # Train the discriminator
         # for _ in range(5):
