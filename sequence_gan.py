@@ -148,7 +148,7 @@ def main():
     # discriminator = Discriminator(sequence_length=64, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim,
     #                             filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
-    config = tf.ConfigProto()
+    config = tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.95))
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())

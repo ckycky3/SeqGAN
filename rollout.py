@@ -85,6 +85,7 @@ class ROLLOUT(object):
         header = '''X:1
 '''
         for i in range(rollout_num):
+            print "Rollout #", i
             for given_num in range(1, 64):
                 feed = {self.x: input_x, self.given_num: given_num}
                 samples = sess.run(self.gen_x, feed)

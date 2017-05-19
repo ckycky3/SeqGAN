@@ -42,6 +42,7 @@ def AbcCheck(abc_code, header, abc2midi_path, play_chords=False, default_midi_pr
             lines.insert(0, line)
             break
     abc_code = os.linesep.join([l.strip() for l in lines])
+    print abc_code
 
     old_stress_model = any(l for l in lines if l.startswith('%%MIDI stressmodel 1'))
 

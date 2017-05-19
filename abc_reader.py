@@ -10,19 +10,23 @@ class ABC_Reader:
         self.note_info_path = 'abc_mapping_dict.pkl'
         self.midi_training_path_trans = "save/abc_trans.pkl"
         # SINGLE_CHAR  / DISTINCT_SCALE / GUITAR_CHORD
-        self.mode = 'SINGLE_CHAR'
+        # self.mode = 'SINGLE_CHAR'
+        # self.mode = 'DISTINCT_SCALE'
+        self.mode = 'GUITAR_CHORD'
+        self.is_header_in_vocab = True
+
         self.window_length = 64
 
     def preprocess(self):
-        # bad_words=['T:','%','X:','S:','A:','B:','C:','D:','F:','G:','H:','I:','O:','r:','U:','W:','w:','Z:']
-        bad_words = ['T:', '%', 'X:', 'S:', 'A:', 'B:', 'C:', 'D:', 'F:', 'G:', 'H:', 'I:', 'O:', 'r:', 'U:', 'W:',
-                     'w:', 'Z:', 'M:','L:','K:','P:','N:','R:']
+        bad_words=['T:','%','X:','S:','A:','B:','C:','D:','F:','G:','H:','I:','O:','r:','U:','W:','w:','Z:', 'R:','P:','N:']
+        # bad_words = ['T:', '%', 'X:', 'S:', 'A:', 'B:', 'C:', 'D:', 'F:', 'G:', 'H:', 'I:', 'O:', 'r:', 'U:', 'W:',
+        #              'w:', 'Z:', 'M:','L:','K:','P:','N:','R:']
 
         with open('abc/mnt.txt') as oldfile, open('abc/mnt_converted.txt', 'w') as newfile:
             for line in oldfile:
                 if not any(bad_word in line for bad_word in bad_words):
-                    if not line.strip() == '':
-                        newfile.write(line)
+                    # if not line.strip() == '':
+                    newfile.write(line)
 
 
     def create_dict(self):
@@ -47,6 +51,9 @@ class ABC_Reader:
                 # print newchar
                 sharp_flatten_scales.append(newchar)
 
+        headers = ['M','L','K']
+        headers_vocab = []
+
         fh = open('abc/mnt_converted.txt').read()
 
 
@@ -67,6 +74,10 @@ class ABC_Reader:
                 filter_out_list = scale_prefix+list(guitar_chord_prefix)
 
 
+            if self.is_header_in_vocab:
+                filter_out_list += headers
+
+
             trans_fh = []
             char_buffer = []
             buffer_mode = ''
@@ -83,11 +94,11 @@ class ABC_Reader:
                         if not self.list_to_char(char_buffer) in scales_extended+sharp_flatten_scales:
 
                             if not (self.mode == 'GUITAR_CHORD' and char == guitar_chord_prefix):
-                                reschars += char_buffer
+                                reschars.append(char_buffer)
                                 buffer_mode = ''
-                                char_buffer = []
+                                char_buffer = ''
                             else:
-                                reschars += char_buffer[:-1]
+                                reschars.append(char_buffer[:-1])
                                 buffer_mode = 'guitar'
                                 char_buffer = char_buffer[-1:]
 
@@ -99,14 +110,14 @@ class ABC_Reader:
                                     prev_chars = self.list_to_char(char_buffer[0:2])
                                     new_char = self.list_to_char(char_buffer[2])
 
-                                    reschars += prev_chars
-                                    reschars += new_char
+                                    reschars.append(prev_chars)
+                                    reschars.append(new_char)
                                     buffer_mode = ''
 
                                     char_buffer = []
 
                                 else:
-                                    reschars += self.list_to_char(char_buffer)
+                                    reschars.append(self.list_to_char(char_buffer))
                                     buffer_mode = ''
 
                                     char_buffer = []
@@ -115,20 +126,35 @@ class ABC_Reader:
 
                         if char == guitar_chord_prefix:
                             chord = self.list_to_char(char_buffer)
-                            reschars += chord
+                            reschars.append(chord)
 
                             if not (chord in guitar_chords):
                                 guitar_chords.append(chord)
 
                             buffer_mode = ''
-                            if len(chord) > 4:
-                                print chord
+                            # if len(chord) > 4:
+                            #     print chord
 
                             char_buffer = []
 
+                    elif buffer_mode == 'header':
+
+                        if char == "\n":
+                            prev_chars = self.list_to_char(char_buffer[:-1])
+                            enter = self.list_to_char(char_buffer[-1:])
+
+                            if not (prev_chars in headers_vocab):
+                                headers_vocab.append(prev_chars)
+
+                            reschars.append(prev_chars)
+                            reschars.append(enter)
+                            buffer_mode = ''
+                            char_buffer = []
+
+
                 else:
                     if not self.is_char_in_list(char, filter_out_list):
-                        reschars += char
+                        reschars.append(char)
                     else:
                         char_buffer += char
 
@@ -138,6 +164,9 @@ class ABC_Reader:
                         if self.mode == 'GUITAR_CHORD':
                             if char == guitar_chord_prefix:
                                 buffer_mode = 'guitar'
+
+                        if self.is_char_in_list(char, headers):
+                            buffer_mode = 'header'
 
 
 
@@ -150,7 +179,8 @@ class ABC_Reader:
 
 
 
-
+        if self.is_header_in_vocab:
+            sorted_vals += headers_vocab
 
         if self.mode == 'GUITAR_CHORD':
             sorted_vals+=guitar_chords
@@ -160,21 +190,40 @@ class ABC_Reader:
         self.note_info_dict = note_info['note'].to_dict()
         self.note_info_dict_swap = dict((y, x) for x, y in self.note_info_dict.iteritems())
 
+        print len(self.note_info_dict)
+        # print self.note_info_dict
+
         with open(self.note_info_path, "w") as openfile:
             pickle.dump(self.note_info_dict, openfile)
 
-
+        # print "reschars: ", reschars[:50]
         for char in reschars:
-            new_cha = self.note_info_dict_swap.get(char)
-            trans_fh.append(new_cha)
+            if type(char) == list:
+                for c in char:
+                    new_cha = self.note_info_dict_swap.get(self.list_to_char(c))
+                    trans_fh.append(new_cha)
+            else:
+                new_cha = self.note_info_dict_swap.get(self.list_to_char(char))
+                if new_cha == None:
+                    for c in char:
+                        new_cha = self.note_info_dict_swap.get(self.list_to_char(c))
+                        trans_fh.append(new_cha)
+                else:
+                    trans_fh.append(new_cha)
 
-        print trans_fh[:50]
+        # print "trans_fh: ", trans_fh[:50]
+        # print reschars
+        # print trans_fh
+        print "number 48"
+        print self.note_info_dict
 
         trans_list = []
         last_index = 0
         while last_index + self.window_length < len(trans_fh):
             trans_list.append(trans_fh[last_index:last_index + self.window_length])
             last_index += self.window_length
+
+        # print trans_list
 
         with open(self.midi_training_path_trans, "w") as output_file:
             pickle.dump(trans_list, output_file)
@@ -192,7 +241,7 @@ class ABC_Reader:
 
         with open(file_name + ".pkl", 'rb') as files:
             res = pickle.load(files)
-            print res
+            # print res
 
         raws = self.trans_trans_songs_to_raw(res)
 
@@ -222,4 +271,4 @@ if __name__ == "__main__":
     reader = ABC_Reader()
     reader.preprocess()
     reader.create_dict()
-    # reader.trans_generated_to_midi('pretrain_epoch100')
+    # reader.trans_generated_to_midi('pkl/pretrain_GC-wh_epoch80')
