@@ -10,6 +10,7 @@ class ABC_Reader:
         self.note_info_path = 'abc_mapping_dict.pkl'
         self.midi_training_path_trans = "save/abc_trans.pkl"
         # SINGLE_CHAR  / DISTINCT_SCALE / GUITAR_CHORD
+
         # self.mode = 'SINGLE_CHAR'
         # self.mode = 'DISTINCT_SCALE'
         self.mode = 'GUITAR_CHORD'
@@ -148,6 +149,7 @@ class ABC_Reader:
 
                             reschars.append(prev_chars)
                             reschars.append(enter)
+
                             buffer_mode = ''
                             char_buffer = []
 
@@ -192,6 +194,7 @@ class ABC_Reader:
 
         print len(self.note_info_dict)
         # print self.note_info_dict
+
 
         with open(self.note_info_path, "w") as openfile:
             pickle.dump(self.note_info_dict, openfile)
