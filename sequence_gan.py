@@ -9,20 +9,39 @@ from rollout import ROLLOUT
 import pickle
 import abc_reader
 
-#########################################################################################
+
+FLAGS = tf.app.flags.FLAGS
+######################################################################################
+#  ABC Reader related
+######################################################################################
+tf.app.flags.DEFINE_string('TOKEN_MODE', 'GUITAR_CHORD', 'There are three modes for creating dictionary: SINGLE_CHAR  / DISTINCT_SCALE / GUITAR_CHORD.'
+                            'SINGLE_CHAR encodes representations as sequence of single characters (so low pitches like C_ are encoded separately. DISTINCE_SCALE considers pitches and flat/sharps'
+                           'GUITAR_CHORD creates expanded vocab set from DISTINCT_SCALE mode. It adds guitar chords like "C" to vocabulary set')
+tf.app.flags.DEFINE_boolean('HEADER_AS_VOCA', True, 'If set True, headers (ex: M:4/4, K:D) are added to vocabulary set')
+
+######################################################################################
+#  General variables
+######################################################################################
+SEED = 88
+melody_size = 83 # will be decided later
+
+tf.app.flags.DEFINE_integer('SEQ_LENGTH',64, 'Sequence Length')
+tf.app.flags.DEFINE_integer('START_TOKEN',48, 'Start token for generating samples from generator')
+tf.app.flags.DEFINE_string('log_dir', 'log/seqgan_experimient-log1.txt', 'logpath')
+tf.app.flags.DEFINE_integer('sample_num',40, 'Number of samples when generating')
+tf.app.flags.DEFINE_string('ckpt_dir','save/train/pretrain_single_larger/', 'checkpoint directory')
+
+
+######################################################################################
 #  Generator  Hyper-parameters
 ######################################################################################
-EMB_DIM = 32 # embedding dimension
-HIDDEN_DIM = 320 # hidden state dimension of lstm cell # 32 -> 320
-SEQ_LENGTH = 64 # sequence length
-START_TOKEN = 48
-PRE_EPOCH_NUM = 200 # supervise (maximum likelihood estimation) epochs
-# PRE_EPOCH_NUM = 0 # supervise (maximum likelihood estimation) epochs
-SEED = 88
-BATCH_SIZE = 32
+tf.app.flags.DEFINE_integer('GEN_EMB_DIM',32, 'dimension of embedding layer')
+tf.app.flags.DEFINE_integer('GEN_HIDDEN_DIM',30,'dimension of hidden layer')
+tf.app.flags.DEFINE_integer('GEN_PRE_EPOCH_NUM',10, 'Number of epoches for pretraining')
+tf.app.flags.DEFINE_integer('GEN_BATCH_SIZE',32, 'Batch size of generator')
 
 #########################################################################################
-#  Discriminator  Hyper-parameters
+#  Discriminator  Hyper-parameters (currently not used)
 #########################################################################################
 dis_embedding_dim = 64
 dis_filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
@@ -32,23 +51,15 @@ dis_l2_reg_lambda = 0.2
 dis_batch_size = 64
 
 #########################################################################################
-#  Basic Training Parameters
+#  RL Training parameters
 #########################################################################################
-TOTAL_BATCH = 10
+tf.app.flags.DEFINE_string('RL_ITER_NUM',10, 'Iteration number of RL')
+tf.app.flags.DEFINE_float('RL_update_rate',0.8, 'Update rate of RL')
 
+# (not used currerntly)
 dis_num_epochs = 1
 dis_alter_epoch = 25
 
-positive_file = 'save/abc_trans.pkl'
-negative_file = 'target_generate/pretrain_small.pkl'
-# eval_file = 'target_generate/midi_trans_eval.pkl'
-logpath = 'log/seqgan_experimient-log1.txt'
-generated_num = 40
-
-ckpt_path = 'save/train/pretrain_single_larger/'
-
-melody_size = 83
-RL_update_rate = 0.8
 
 
 def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
@@ -62,8 +73,6 @@ def generate_samples(sess, trainable_model, batch_size, generated_num, output_fi
         pickle.dump(generated_samples, fout)
 
 def target_loss(sess, target_lstm, data_loader):
-    # target_loss means the oracle negative log-likelihood tested with the oracle model "target_lstm"
-    # For more details, please see the Section 4 in https://arxiv.org/abs/1609.05473
     nll = []
     data_loader.reset_pointer()
 
@@ -88,51 +97,50 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-
-
 def main():
-    ABC_READER = abc_reader.ABC_Reader()
-    ABC_READER.create_dict()
+
+    ABC_READER = abc_reader.ABC_Reader(FLAGS.TOKEN_MODE, FLAGS.HEADER_AS_VOCA, FLAGS.SEQ_LENGTH, 'abc/mnt.txt', 'abc/mnt_converted.txt')
+    melody_size, note_dict_path, tr_data_path = ABC_READER.create_dict()
 
 
     random.seed(SEED)
     np.random.seed(SEED)
 
-    gen_data_loader = ABC_Data_Loader(BATCH_SIZE)
-    likelihood_data_loader = ABC_Data_Loader(BATCH_SIZE) # For testing
+    gen_data_loader = ABC_Data_Loader(FLAGS.GEN_BATCH_SIZE)
+    likelihood_data_loader = ABC_Data_Loader(FLAGS.GEN_BATCH_SIZE) # For testing
 
     # dis_data_loader = Dis_dataloader(BATCH_SIZE)
 
-    generator = Generator(melody_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)
+    generator = Generator(melody_size, FLAGS.GEN_BATCH_SIZE, FLAGS.GEN_EMB_DIM, FLAGS.GEN_HIDDEN_DIM, FLAGS.SEQ_LENGTH, FLAGS.START_TOKEN)
     # discriminator = Discriminator(sequence_length=64, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim,
     #                             filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
-    config = tf.ConfigProto()
+    config = tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.95))
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
 
     # First, use the oracle model to provide the positive examples, which are sampled from the oracle data distribution
     # generate_samples(sess, target_lstm, BATCH_SIZE, generated_num, positive_file)
-    gen_data_loader.create_batches(positive_file)
+    gen_data_loader.create_batches(tr_data_path)
 
     log = open('save/experiment-log.txt', 'w')
      # pre-train generator
     print 'Start pre-training...'
     log.write('pre-training...\n')
-    for epoch in xrange(PRE_EPOCH_NUM):
+    for epoch in xrange(FLAGS.GEN_PRE_EPOCH_NUM):
         loss = pre_train_epoch(sess, generator, gen_data_loader)
 
         if epoch % 50 == 0:
             file_name = 'target_generate/pretrain_single_larger/pretrain_epoch' + str(epoch) + '.pkl'
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, file_name)
+            generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_name)
             likelihood_data_loader.create_batches(file_name)
 
             print 'pre-train epoch ', epoch, 'test_loss ', loss
             buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
             log.write(buffer)
 
-    generator.save_variables(sess, ckpt_path)
+    generator.save_variables(sess, FLAGS.ckpt_dir)
 
     # generator.restore_variables(sess, ckpt_path)
 
@@ -153,31 +161,31 @@ def main():
     #             _ = sess.run(discriminator.train_op, feed)
 
 
-    # rollout = ROLLOUT(generator, ABC_READER, 0.8)
-    #
-    # print '#########################################################################'
-    # print 'Start Adversarial Training...'
-    # log.write('adversarial training...\n')
-    # for total_batch in range(TOTAL_BATCH):
-    #     # Train the generator for one step
-    #     for it in range(1):
-    #         samples = generator.generate(sess)
-    #         rewards = rollout.get_reward(sess, samples, 2)
-    #         feed = {generator.x: samples, generator.rewards: rewards}
-    #         _ = sess.run(generator.g_updates, feed_dict=feed)
-    #
-    #     # Test
-    #     if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
-    #         file_name = 'target_generate/pretrain_epoch' + str(total_batch) + '.pkl'
-    #         generate_samples(sess, generator, BATCH_SIZE, generated_num, file_name)
-    #         likelihood_data_loader.create_batches(file_name)
-    #         test_loss = target_loss(sess, generator, likelihood_data_loader)
-    #         buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
-    #         print 'total_batch: ', total_batch, 'test_loss: ', test_loss
-    #         log.write(buffer)
-    #
-    #     # Update roll-out parameters
-    #     rollout.update_params()
+    rollout = ROLLOUT(generator, ABC_READER, FLAGS.RL_update_rate)
+
+    print '#########################################################################'
+    print 'Start Adversarial Training...'
+    log.write('adversarial training...\n')
+    for total_batch in range(FLAGS.RL_ITER_NUM):
+        # Train the generator for one step
+        for it in range(1):
+            samples = generator.generate(sess)
+            rewards = rollout.get_reward(sess, samples, 2)
+            feed = {generator.x: samples, generator.rewards: rewards}
+            _ = sess.run(generator.g_updates, feed_dict=feed)
+
+        # Test
+        if total_batch % 5 == 0 or total_batch == FLAGS.RL_ITER_NUM - 1:
+            file_name = 'target_generate/pretrain_epoch' + str(total_batch) + '.pkl'
+            generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_name)
+            likelihood_data_loader.create_batches(file_name)
+            test_loss = target_loss(sess, generator, likelihood_data_loader)
+            buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
+            print 'total_batch: ', total_batch, 'test_loss: ', test_loss
+            log.write(buffer)
+
+        # Update roll-out parameters
+        rollout.update_params()
 
         # Train the discriminator
         # for _ in range(5):

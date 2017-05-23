@@ -1,4 +1,3 @@
 pre-training...
-epoch:	0	nll:	1.99762
-epoch:	50	nll:	1.32629
-epoch:	100	nll:	7.55094
+epoch:	0	nll:	2.93802
+adversarial training...
