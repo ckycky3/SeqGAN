@@ -29,6 +29,8 @@ class ABC_Reader:
         with open(self.origin_path) as oldfile, open(self.output_path, 'w') as newfile:
             for line in oldfile:
                 if not any(bad_word in line for bad_word in headers_to_remove):
+                    if line.startswith("M:"):
+                        line = '\t' + line
                     newfile.write(line)
 
 
@@ -281,6 +283,7 @@ class ABC_Reader:
 
 
 if __name__ == "__main__":
-    reader = ABC_Reader()
+    reader = ABC_Reader(mode="GUITAR_CHORD", is_header_in_vocab=True, seq_length=64,
+                        origin_path='abc/mnt.txt', output_path='abc/mnt_converted.txt')
     reader.create_dict()
     # reader.trans_generated_to_midi('pkl/pretrain_GC-wh_epoch80')
