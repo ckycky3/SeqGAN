@@ -66,6 +66,9 @@ def AbcCheck(abc_code, header, abc2midi_path, play_chords=False, default_midi_pr
     # if "Warning" in stdout_value:
     #     print "Warning"
     # print "stderr_value : ", stderr_value
+    proc = subprocess.Popen(['sleep', str(0.5)])
+    proc.communicate()
+
     if stdout_value:
         stdout_value = re.sub(r'(?m)(writing MIDI file .*\r?\n?)', '', stdout_value)
     if process.returncode != 0:
