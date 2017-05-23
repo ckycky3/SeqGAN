@@ -6,7 +6,6 @@ from dataloader import ABC_Data_Loader
 from generator import Generator
 from discriminator import Discriminator
 from rollout import ROLLOUT
-from target_lstm import TARGET_LSTM
 import pickle
 import abc_reader
 
@@ -89,43 +88,6 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-def initialize_parameters(inout_dim):
-
-    result_list = []
-    val = 32
-    layers = [[inout_dim, val],
-
-              [val, val],
-              [val, val],
-              [1, val],
-
-              [val, val],
-              [val, val],
-              [1, val],
-
-              [val, val],
-              [val, val],
-              [1, val],
-
-              [val, val],
-              [val, val],
-              [1, val],
-
-              [val, inout_dim],
-
-              [1, inout_dim]]
-
-    for arr_dim, layer_num in layers:
-        if arr_dim > 1:
-            tmp = np.random.random((arr_dim,layer_num)).astype(np.float32)
-        else:
-            tmp = np.random.random(layer_num,).astype(np.float32)
-
-        result_list.append(tmp)
-
-    result = np.array(result_list)
-
-    return result
 
 
 def main():
@@ -142,9 +104,6 @@ def main():
     # dis_data_loader = Dis_dataloader(BATCH_SIZE)
 
     generator = Generator(melody_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)
-    target_params = initialize_parameters(melody_size)
-    # target_lstm = TARGET_LSTM(melody_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, target_params) # The oracle model
-
     # discriminator = Discriminator(sequence_length=64, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim,
     #                             filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 

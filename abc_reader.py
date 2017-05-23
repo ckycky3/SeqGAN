@@ -10,7 +10,7 @@ class ABC_Reader:
         self.note_info_path = 'abc_mapping_dict.pkl'
         self.midi_training_path_trans = "save/abc_trans.pkl"
         # SINGLE_CHAR  / DISTINCT_SCALE / GUITAR_CHORD
-        self.mode = 'GUITAR_CHORD'
+        self.mode = 'DISTINCT_SCALE'
         self.is_header_in_vocab = True
 
         self.window_length = 64
@@ -176,7 +176,6 @@ class ABC_Reader:
             sorted_vals+=sharp_flatten_scales
 
 
-
         if self.is_header_in_vocab:
             sorted_vals += headers_vocab
 
@@ -253,4 +252,4 @@ if __name__ == "__main__":
     reader = ABC_Reader()
     reader.preprocess()
     reader.create_dict()
-    # reader.trans_generated_to_midi('pretrain_epoch100')
+    reader.trans_generated_to_midi('pretrain_epoch100')
