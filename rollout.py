@@ -271,7 +271,7 @@ class ROLLOUT(object):
         if show:
             print "---------------------abc---------------------"
             print abc
-        message = abc_errorcheck.AbcCheck(abc_code=abc, header=header, abc2midi_path=abc2midi_path)
+        message = abc_errorcheck.abc_check(abc_code=abc, header=header, abc2midi_path=abc2midi_path)
         lines = re.split('\r\n|\r|\n', message)
         err_cnt = 0
         wrn_cnt = 0

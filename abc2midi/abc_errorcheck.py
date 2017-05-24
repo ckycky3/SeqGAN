@@ -16,7 +16,7 @@ except ImportError:
         sys.stderr.write('Warning: pygame/pypm module not found. Recording midi will not work')
 
 
-def AbcCheck(abc_code, header, abc2midi_path, play_chords=False, default_midi_program=1, tempo_multiplier=None, add_meta_data=False):
+def abc_check(abc_code, header, abc2midi_path, play_chords=False, default_midi_program=1, tempo_multiplier=None, add_meta_data=False):
     # add some extra lines to header (whether chords are on/off and what default midi program to use for each channel) 
     extra_lines = []
     for channel in range(1, 16+1):
@@ -191,5 +191,5 @@ G4 C4 D2D2 | D4 D4 |'''
 # K:Ddor
 # laksejoifheqiuugh3wiueqriojwef'''
     abc2midi_path = os.path.join('abc2midi', 'bin', 'abc2midi')
-    midi = AbcCheck(abc_code=abc, header='', abc2midi_path=abc2midi_path)
+    midi = abc_check(abc_code=abc, header='', abc2midi_path=abc2midi_path)
     print midi
