@@ -9,6 +9,7 @@ from rollout import ROLLOUT
 import pickle
 import abc_reader
 from tensorflow.python.platform import gfile
+from time import strftime, localtime
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -132,6 +133,7 @@ def main():
      # pre-train generator
     print 'Start pre-training...'
     log.write('pre-training...\n')
+    print strftime("%Y-%m-%d %H:%M:%S", localtime())
     for epoch in xrange(FLAGS.GEN_PRE_EPOCH_NUM):
         loss = pre_train_epoch(sess, generator, gen_data_loader)
 
@@ -172,6 +174,7 @@ def main():
     print '#########################################################################'
     print 'Start Adversarial Training...'
     log.write('adversarial training...\n')
+    print strftime("%Y-%m-%d %H:%M:%S", localtime())
     for total_batch in range(FLAGS.RL_ITER_NUM):
         # Train the generator for one step
         for it in range(1):
@@ -216,6 +219,7 @@ def main():
         #             _ = sess.run(discriminator.train_op, feed)
 
     log.close()
+    print strftime("%Y-%m-%d %H:%M:%S", localtime())
 
 
 if __name__ == '__main__':
