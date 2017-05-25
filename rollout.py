@@ -79,14 +79,14 @@ class ROLLOUT(object):
         self.gen_x = self.gen_x.stack()  # seq_length x batch_size
         self.gen_x = tf.transpose(self.gen_x, perm=[1, 0])  # batch_size x seq_length
 
-    def get_reward(self, sess, input_x, rollout_num):
+    def get_reward(self, sess, input_x, rollout_num, seq_length):
         rewards = []
         abc2midi_path = os.path.join('abc2midi', 'bin', 'abc2midi')
         header = '''X:1
 '''
         for i in range(rollout_num):
             print "Rollout #", i
-            for given_num in range(1, 64):
+            for given_num in range(1, seq_length):
                 feed = {self.x: input_x, self.given_num: given_num}
                 samples = sess.run(self.gen_x, feed)
 
@@ -120,7 +120,7 @@ class ROLLOUT(object):
             if i == 0:
                 rewards.append(reward)
             else:
-                rewards[63] += reward
+                rewards[seq_length-1] += reward
 
         rewards = np.transpose(np.array(rewards)) / (1.0 * rollout_num)  # batch_size x seq_length
         return rewards

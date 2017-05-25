@@ -19,13 +19,13 @@ except ImportError:
 def abc_check(abc_code, header, abc2midi_path, play_chords=False, default_midi_program=1, tempo_multiplier=None, add_meta_data=False):
     # add some extra lines to header (whether chords are on/off and what default midi program to use for each channel) 
     extra_lines = []
-    for channel in range(1, 16+1):
-        extra_lines.append('%%%%MIDI program %d %d' % (channel, default_midi_program))
-    if play_chords:
-        extra_lines.append('%%MIDI gchordon')
-    else:
-        extra_lines.append('%%MIDI gchordoff')
-    header = os.linesep.join(extra_lines + [header.strip()])
+    # for channel in range(1, 16+1):
+    #     extra_lines.append('%%%%MIDI program %d %d' % (channel, default_midi_program))
+    # if play_chords:
+    #     extra_lines.append('%%MIDI gchordon')
+    # else:
+    #     extra_lines.append('%%MIDI gchordoff')
+    # header = os.linesep.join(extra_lines + [header.strip()])
     
     abc_code = process_abc_code(abc_code, header, tempo_multiplier=tempo_multiplier, minimal_processing=True)
     abc_code = abc_code.replace(r'\"', ' ')  # replace escaped " characters with space since abc2midi doesn't understand them    

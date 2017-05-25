@@ -174,7 +174,7 @@ def main():
         # Train the generator for one step
         for it in range(1):
             samples = generator.generate(sess)
-            rewards = rollout.get_reward(sess, samples, 2)
+            rewards = rollout.get_reward(sess, samples, 2, FLAGS.SEQ_LENGTH)
             feed = {generator.x: samples, generator.rewards: rewards}
             _ = sess.run(generator.g_updates, feed_dict=feed)
 
@@ -182,9 +182,10 @@ def main():
 
         # Test
         if total_batch % 5 == 0 or total_batch == FLAGS.RL_ITER_NUM - 1:
-            file_name = 'target_generate/pretrain_epoch' + str(total_batch) + '.pkl'
-            generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_name)
-            likelihood_data_loader.create_batches(file_name)
+            file_dir = 'target_generate/'
+            file_name = 'pretrain_epoch' + str(total_batch) + '.pkl'
+            generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_dir, file_name)
+            likelihood_data_loader.create_batches(file_dir+file_name)
             test_loss = target_loss(sess, generator, likelihood_data_loader)
             buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
             print 'total_batch: ', total_batch, 'test_loss: ', test_loss
