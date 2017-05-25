@@ -123,9 +123,9 @@ class Generator(object):
         outputs = sess.run(self.gen_x)
         return outputs
 
-    def save_variables(self, sess, path):
+    def save_variables(self, sess, path, step):
         saver = tf.train.Saver()
-        saver.save(sess, path)
+        saver.save(sess, path, global_step=step)
 
     def restore_variables(self, sess, path):
         saver = tf.train.Saver()

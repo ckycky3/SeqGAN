@@ -139,8 +139,7 @@ def main():
             print 'pre-train epoch ', epoch, 'test_loss ', loss
             buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
             log.write(buffer)
-
-    generator.save_variables(sess, FLAGS.ckpt_dir)
+            generator.save_variables(sess, FLAGS.ckpt_dir, epoch)
 
     # generator.restore_variables(sess, ckpt_path)
 
@@ -173,6 +172,8 @@ def main():
             rewards = rollout.get_reward(sess, samples, 2)
             feed = {generator.x: samples, generator.rewards: rewards}
             _ = sess.run(generator.g_updates, feed_dict=feed)
+
+
 
         # Test
         if total_batch % 5 == 0 or total_batch == FLAGS.RL_ITER_NUM - 1:
