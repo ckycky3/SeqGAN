@@ -27,7 +27,7 @@ SEED = 88
 melody_size = 83 # will be decided later
 
 tf.app.flags.DEFINE_integer('SEQ_LENGTH',64, 'Sequence Length')
-tf.app.flags.DEFINE_integer('START_TOKEN',48, 'Start token for generating samples from generator')
+tf.app.flags.DEFINE_integer('START_TOKEN',0, 'Start token for generating samples from generator')
 tf.app.flags.DEFINE_string('log_dir', 'log/seqgan_experimient-log1.txt', 'logpath')
 tf.app.flags.DEFINE_integer('sample_num',40, 'Number of samples when generating')
 tf.app.flags.DEFINE_string('pretrain_ckpt_dir','save/train/pretrain_single_larger/', 'pre-train checkpoint directory')
