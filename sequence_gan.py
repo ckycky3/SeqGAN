@@ -144,6 +144,8 @@ def main():
             print 'pre-train epoch ', epoch, 'test_loss ', loss
             buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
             log.write(buffer)
+            if not gfile.Exists(FLAGS.pretrain_ckpt_dir):
+                gfile.MakeDirs(FLAGS.pretrain_ckpt_dir)
             generator.save_variables(sess, FLAGS.pretrain_ckpt_dir, epoch)
 
     # generator.restore_variables(sess, ckpt_path)
@@ -190,6 +192,8 @@ def main():
             buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
             print 'total_batch: ', total_batch, 'test_loss: ', test_loss
             log.write(buffer)
+            if not gfile.Exists(FLAGS.rollout_ckpt_dir):
+                gfile.MakeDirs(FLAGS.rollout_ckpt_dir)
             generator.save_variables(sess, FLAGS.rollout_ckpt_dir, total_batch)
 
         # Update roll-out parameters
