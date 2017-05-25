@@ -30,7 +30,8 @@ tf.app.flags.DEFINE_integer('SEQ_LENGTH',64, 'Sequence Length')
 tf.app.flags.DEFINE_integer('START_TOKEN',48, 'Start token for generating samples from generator')
 tf.app.flags.DEFINE_string('log_dir', 'log/seqgan_experimient-log1.txt', 'logpath')
 tf.app.flags.DEFINE_integer('sample_num',40, 'Number of samples when generating')
-tf.app.flags.DEFINE_string('ckpt_dir','save/train/pretrain_single_larger/', 'checkpoint directory')
+tf.app.flags.DEFINE_string('pretrain_ckpt_dir','save/train/pretrain_single_larger/', 'pre-train checkpoint directory')
+tf.app.flags.DEFINE_string('rollout_ckpt_dir','save/train/rollout/', 'rollout checkpoint directory')
 
 
 ######################################################################################
@@ -143,7 +144,7 @@ def main():
             print 'pre-train epoch ', epoch, 'test_loss ', loss
             buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
             log.write(buffer)
-            generator.save_variables(sess, FLAGS.ckpt_dir, epoch)
+            generator.save_variables(sess, FLAGS.pretrain_ckpt_dir, epoch)
 
     # generator.restore_variables(sess, ckpt_path)
 
@@ -188,6 +189,7 @@ def main():
             buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
             print 'total_batch: ', total_batch, 'test_loss: ', test_loss
             log.write(buffer)
+            generator.save_variables(sess, FLAGS.rollout_ckpt_dir, total_batch)
 
         # Update roll-out parameters
         rollout.update_params()
