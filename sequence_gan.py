@@ -138,7 +138,7 @@ def main():
             file_dir = 'target_generate/pretrain_single_larger/'
             file_name = 'pretrain_epoch' + str(epoch) + '.pkl'
             generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_dir, file_name)
-            likelihood_data_loader.create_batches(file_name)
+            likelihood_data_loader.create_batches(file_dir+file_name)
 
             print 'pre-train epoch ', epoch, 'test_loss ', loss
             buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
