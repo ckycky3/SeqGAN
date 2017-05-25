@@ -8,6 +8,7 @@ from discriminator import Discriminator
 from rollout import ROLLOUT
 import pickle
 import abc_reader
+from tensorflow.python.platform import gfile
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -62,14 +63,16 @@ dis_alter_epoch = 25
 
 
 
-def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
+def generate_samples(sess, trainable_model, batch_size, generated_num, output_dir, output_file):
     # Generate Samples
     generated_samples = []
     for _ in range(int(generated_num / batch_size)):
         generated_samples.extend(trainable_model.generate(sess))
 
     # file_name = 'target_generate/pretrain_small.pkl'
-    with open(output_file, 'w') as fout:
+    if not gfile.Exists(output_dir):
+        gfile.MakeDirs(output_dir)
+    with open(output_dir + output_file, 'w') as fout:
         pickle.dump(generated_samples, fout)
 
 def target_loss(sess, target_lstm, data_loader):
@@ -132,8 +135,9 @@ def main():
         loss = pre_train_epoch(sess, generator, gen_data_loader)
 
         if epoch % 50 == 0:
-            file_name = 'target_generate/pretrain_single_larger/pretrain_epoch' + str(epoch) + '.pkl'
-            generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_name)
+            file_dir = 'target_generate/pretrain_single_larger/'
+            file_name = 'pretrain_epoch' + str(epoch) + '.pkl'
+            generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_dir, file_name)
             likelihood_data_loader.create_batches(file_name)
 
             print 'pre-train epoch ', epoch, 'test_loss ', loss
