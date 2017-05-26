@@ -334,12 +334,12 @@ class ROLLOUT(object):
         err_cnt = 0
         wrn_cnt = 0
         if show:
-            print lines
+            print message
         for i in range(len(lines)):
-            if lines[i].find("Ignoring text: =======================")!=-1:
+            if "Ignoring text: =======================" in lines[i]:
                 separator = True
                 # print "Ignoring text found", i
-            elif separator and lines[i].find("No valid K: field found at start of tune")!=-1:
+            elif separator and "No valid K: field found at start of tune" in lines[i]:
                 if show:
                     print err_cnt, " Errors, ", wrn_cnt, " Warnings"
                 if err_cnt == 0 and wrn_cnt == 0:
