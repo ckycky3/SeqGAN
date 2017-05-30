@@ -27,7 +27,7 @@ tf.app.flags.DEFINE_boolean('HEADER_AS_VOCA', True, 'If set True, headers (ex: M
 SEED = 88
 melody_size = 83 # will be decided later
 
-tf.app.flags.DEFINE_integer('SEQ_LENGTH',64, 'Sequence Length')
+tf.app.flags.DEFINE_integer('SEQ_LENGTH',120, 'Sequence Length')
 tf.app.flags.DEFINE_integer('START_TOKEN',0, 'Start token for generating samples from generator')
 tf.app.flags.DEFINE_string('log_dir', 'log/seqgan_experimient-log1.txt', 'logpath')
 tf.app.flags.DEFINE_integer('sample_num',40, 'Number of samples when generating')
@@ -120,8 +120,8 @@ def main():
     # discriminator = Discriminator(sequence_length=64, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim,
     #                             filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
-    config = tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.95))
-    config.gpu_options.allow_growth = True
+    config = tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.4))
+    # config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
 
@@ -129,28 +129,29 @@ def main():
     # generate_samples(sess, target_lstm, BATCH_SIZE, generated_num, positive_file)
     gen_data_loader.create_batches(tr_data_path)
 
-    log = open('save/experiment-log.txt', 'w')
-     # pre-train generator
-    print 'Start pre-training...'
-    log.write('pre-training...\n')
     print strftime("%Y-%m-%d %H:%M:%S", localtime())
-    for epoch in xrange(FLAGS.GEN_PRE_EPOCH_NUM):
-        loss = pre_train_epoch(sess, generator, gen_data_loader)
+    log = open('save/experiment-log.txt', 'w')
 
-        if epoch % 50 == 0:
-            file_dir = 'target_generate/pretrain_single_larger/'
-            file_name = 'pretrain_epoch' + str(epoch) + '.pkl'
-            generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_dir, file_name)
-            likelihood_data_loader.create_batches(file_dir+file_name)
+    #  # pre-train generator
+    # print 'Start pre-training...'
+    # log.write('pre-training...\n')
+    # for epoch in xrange(FLAGS.GEN_PRE_EPOCH_NUM):
+    #     loss = pre_train_epoch(sess, generator, gen_data_loader)
+    #
+    #     if epoch % 10 == 0:
+    #         print 'pre-train epoch ', epoch, 'test_loss ', loss
+    #         buffer = 'epoch:\t' + str(epoch) + '\tnll:\t' + str(loss) + '\n'
+    #         log.write(buffer)
+    #         if epoch % 50 == 0:
+    #             file_dir = 'target_generate/pretrain_single_larger/'
+    #             file_name = 'pretrain_epoch' + str(epoch) + '.pkl'
+    #             generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_dir, file_name)
+    #             likelihood_data_loader.create_batches(file_dir+file_name)
+    #             if not gfile.Exists(FLAGS.pretrain_ckpt_dir):
+    #                 gfile.MakeDirs(FLAGS.pretrain_ckpt_dir)
+    #             generator.save_variables(sess, FLAGS.pretrain_ckpt_dir, epoch)
 
-            print 'pre-train epoch ', epoch, 'test_loss ', loss
-            buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
-            log.write(buffer)
-            if not gfile.Exists(FLAGS.pretrain_ckpt_dir):
-                gfile.MakeDirs(FLAGS.pretrain_ckpt_dir)
-            generator.save_variables(sess, FLAGS.pretrain_ckpt_dir, epoch)
-
-    # generator.restore_variables(sess, ckpt_path)
+    generator.restore_variables(sess, FLAGS.pretrain_ckpt_dir)
 
     # print 'Start pre-training discriminator...'
     # # Train 3 epoch on the generated data and do this for 50 times
@@ -179,7 +180,7 @@ def main():
         # Train the generator for one step
         for it in range(1):
             samples = generator.generate(sess)
-            rewards, tot_err, tot_wrn = rollout.get_reward(sess, samples, 2, FLAGS.SEQ_LENGTH)
+            rewards, tot_err, tot_wrn = rollout.get_reward(sess, samples, 8, FLAGS.SEQ_LENGTH)
             buffer = 'Iter:\t' + str(total_batch) + '\tTotal Error:\t' + str(tot_err) + '\tTotal Warning:\t' + str(tot_wrn) + '\n'
             print buffer
             log.write(buffer)
@@ -191,7 +192,7 @@ def main():
         # Test
         if total_batch % 5 == 0 or total_batch == FLAGS.RL_ITER_NUM - 1:
             file_dir = 'target_generate/'
-            file_name = 'pretrain_epoch' + str(total_batch) + '.pkl'
+            file_name = 'rollout_epoch' + str(total_batch) + '.pkl'
             generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_dir, file_name)
             likelihood_data_loader.create_batches(file_dir+file_name)
             test_loss = target_loss(sess, generator, likelihood_data_loader)
