@@ -40,7 +40,7 @@ tf.app.flags.DEFINE_string('rollout_ckpt_dir','save/train/rollout/', 'rollout ch
 ######################################################################################
 tf.app.flags.DEFINE_integer('GEN_EMB_DIM',32, 'dimension of embedding layer')
 tf.app.flags.DEFINE_integer('GEN_HIDDEN_DIM',30,'dimension of hidden layer')
-tf.app.flags.DEFINE_integer('GEN_PRE_EPOCH_NUM',10, 'Number of epoches for pretraining')
+tf.app.flags.DEFINE_integer('GEN_PRE_EPOCH_NUM',0, 'Number of epoches for pretraining')
 tf.app.flags.DEFINE_integer('GEN_BATCH_SIZE',32, 'Batch size of generator')
 
 #########################################################################################
@@ -179,7 +179,10 @@ def main():
         # Train the generator for one step
         for it in range(1):
             samples = generator.generate(sess)
-            rewards = rollout.get_reward(sess, samples, 2, FLAGS.SEQ_LENGTH)
+            rewards, tot_err, tot_wrn = rollout.get_reward(sess, samples, 2, FLAGS.SEQ_LENGTH)
+            buffer = 'Iter:\t' + str(total_batch) + '\tTotal Error:\t' + str(tot_err) + '\tTotal Warning:\t' + str(tot_wrn) + '\n'
+            print buffer
+            log.write(buffer)
             feed = {generator.x: samples, generator.rewards: rewards}
             _ = sess.run(generator.g_updates, feed_dict=feed)
 

@@ -85,6 +85,8 @@ class ROLLOUT(object):
         rewards = []
         header = '''X:1
 '''
+        tot_err = 0
+        tot_wrn = 0
         for i in range(rollout_num):
             print "Rollout #", i
             for given_num in range(1, seq_length):
@@ -104,7 +106,7 @@ class ROLLOUT(object):
                 integrated_message = self.abc_to_message(one_abc)
                 # print integrated_message
                 # print "message to error list"
-                error_list = self.message_to_error_list(integrated_message, False)
+                error_list = self.message_to_error_list(integrated_message, False, tot_err, tot_wrn)
                 reward = np.array([0 if error else 1 for error in error_list])
                 # for sample in decode_samples:
                 #     # print "-------------Sample---------------"
@@ -124,7 +126,7 @@ class ROLLOUT(object):
             decode_samples = self.ABC_Reader.trans_trans_songs_to_raw(input_x)
             one_abc = self.samples_to_one_abc(decode_samples, header)
             integrated_message = self.abc_to_message(one_abc)
-            error_list = self.message_to_error_list(integrated_message, True)
+            error_list, tot_err, tot_wrn = self.message_to_error_list(integrated_message, True, tot_err, tot_wrn)
             reward = np.array([0 if error else 1 for error in error_list])
             # error_list = []
             # for sample in decode_samples:
@@ -137,7 +139,7 @@ class ROLLOUT(object):
                 rewards[seq_length-1] += reward
 
         rewards = np.transpose(np.array(rewards)) / (1.0 * rollout_num)  # batch_size x seq_length
-        return rewards
+        return rewards, tot_err, tot_wrn
 
     def create_recurrent_unit(self):
         # Weights and Bias for input and hidden tensor
@@ -327,7 +329,7 @@ class ROLLOUT(object):
             stdout_value = re.sub(r'(?m)(writing MIDI file .*\r?\n?)', '', stdout_value)
         return stdout_value
 
-    def message_to_error_list(self, message, show):
+    def message_to_error_list(self, message, show, err, wrn):
         error_list = []
         separator = False
         lines = re.split('\r\n|\r|\n', message)
@@ -355,10 +357,15 @@ class ROLLOUT(object):
                 else:
                     if show:
                         print lines[i]
+                        err += 1
                     err_cnt += 1
             elif lines[i].startswith('Warning'):
                 if show:
                     print lines[i]
+                    wrn += 1
                 wrn_cnt += 1
         # print len(error_list)
-        return error_list
+        if show:
+            return error_list, err, wrn
+        else:
+            return error_list

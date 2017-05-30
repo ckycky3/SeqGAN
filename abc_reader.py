@@ -262,6 +262,9 @@ class ABC_Reader:
                 trans_list_raw.append(trans_fh[eos_index[i-1]:eos_index[i]])
         trans_list_raw.append(trans_fh[eos_index[i]:])
 
+        for trans in trans_list_raw:
+            print len(trans)
+
         trans_list = []
         for trans in trans_list_raw:
             if len(trans) >= self.seq_length:
@@ -316,7 +319,7 @@ class ABC_Reader:
 
 
 if __name__ == "__main__":
-    reader = ABC_Reader(mode="GUITAR_CHORD", is_header_in_vocab=True, seq_length=120,
+    reader = ABC_Reader(mode="SINGLE_CHAR", is_header_in_vocab=True, seq_length=120,
                         origin_path='abc/mnt.txt', output_path='abc/mnt_converted.txt')
     reader.preprocess()
     reader.create_dict()
