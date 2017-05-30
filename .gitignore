@@ -1,5 +1,4 @@
-save/
-target_generate/
+save/train/*.*
 *.mid
 *.pkl
 *.pyc

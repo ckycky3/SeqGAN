@@ -17,7 +17,6 @@ class ABC_Reader:
         self.window_length = seq_length
         self.origin_path = origin_path #'abc/mnt.txt'
         self.output_path = output_path #'abc/mnt_converted.txt'
-        self.seq_length = seq_length
 
     def preprocess(self):
 
@@ -25,28 +24,16 @@ class ABC_Reader:
         headers_to_remove=['T:','%','X:','S:','A:','B:','C:','D:','F:','G:','H:','I:','O:','r:','U:','W:','w:','Z:', 'R:','P:','N:']
         # bad_words = ['T:', '%', 'X:', 'S:', 'A:', 'B:', 'C:', 'D:', 'F:', 'G:', 'H:', 'I:', 'O:', 'r:', 'U:', 'W:',
         #              'w:', 'Z:', 'M:','L:','K:','P:','N:','R:']
-        abc_list = []
-        with open(self.origin_path) as abcfile:
-            abc = ''
-            for line in abcfile:
-                if line.startswith("X:"):
-                    abc_list.append(abc)
-                    abc = ''
-                else:
-                    if not any(bad_word in line for bad_word in headers_to_remove):
-                        abc += line
-            abc_list.append(abc)
 
-        abc_list.remove(abc_list[0])
 
-        with open(self.output_path, 'w') as newfile:
-            for abc in abc_list:
-                abc = '\t' + abc
-                newfile.write(abc)
+        with open(self.origin_path) as oldfile, open(self.output_path, 'w') as newfile:
+            for line in oldfile:
+                if not any(bad_word in line for bad_word in headers_to_remove):
+                    if line.startswith("M:"):
+                        line = '\t' + line
+                    newfile.write(line)
 
-        # for abc in abc_list:
-        #     print abc
-        #     print "========================"
+
 
 
     def create_dict(self):
@@ -227,48 +214,28 @@ class ABC_Reader:
             pickle.dump(self.note_info_dict, openfile)
 
         # print "reschars: ", reschars[:50]
-
-        eos_index = []
         for char in reschars:
             if type(char) == list:
                 for c in char:
                     new_cha = self.note_info_dict_swap.get(self.list_to_char(c))
                     trans_fh.append(new_cha)
-                    if new_cha == 0:
-                        eos_index.append(len(trans_fh)-1)
             else:
                 new_cha = self.note_info_dict_swap.get(self.list_to_char(char))
                 if new_cha == None:
                     for c in char:
                         new_cha = self.note_info_dict_swap.get(self.list_to_char(c))
                         trans_fh.append(new_cha)
-                        if new_cha == 0:
-                            eos_index.append(len(trans_fh) - 1)
                 else:
                     trans_fh.append(new_cha)
-                    if new_cha == 0:
-                        eos_index.append(len(trans_fh)-1)
-        # print eos_index
-        trans_list_raw = []
-        # last_index = 0
-        # while last_index + self.window_length < len(trans_fh):
-        #     trans_list_raw.append(trans_fh[last_index:last_index + self.window_length])
-        #     last_index += self.window_length
 
-        for i in range(len(eos_index)):
-            if i==0:
-                continue
-            else:
-                trans_list_raw.append(trans_fh[eos_index[i-1]:eos_index[i]])
-        trans_list_raw.append(trans_fh[eos_index[i]:])
 
         trans_list = []
-        for trans in trans_list_raw:
-            if len(trans) >= self.seq_length:
-                trans_list.append(trans[:self.seq_length])
+        last_index = 0
+        while last_index + self.window_length < len(trans_fh):
+            trans_list.append(trans_fh[last_index:last_index + self.window_length])
+            last_index += self.window_length
 
-        # for trans in trans_list:
-        #     print trans
+        # print trans_list
 
         tr_output_path = self.tr_output_path_prefix + paths_postfix
         with open(tr_output_path, "w") as output_file:
@@ -316,8 +283,7 @@ class ABC_Reader:
 
 
 if __name__ == "__main__":
-    reader = ABC_Reader(mode="GUITAR_CHORD", is_header_in_vocab=True, seq_length=120,
+    reader = ABC_Reader(mode="GUITAR_CHORD", is_header_in_vocab=True, seq_length=64,
                         origin_path='abc/mnt.txt', output_path='abc/mnt_converted.txt')
-    reader.preprocess()
     reader.create_dict()
     # reader.trans_generated_to_midi('pkl/pretrain_GC-wh_epoch80')
