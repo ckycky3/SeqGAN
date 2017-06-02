@@ -13,6 +13,10 @@ class Generator(object):
         self.sequence_length = sequence_length
         self.start_token = tf.constant([start_token] * self.batch_size, dtype=tf.int32)
         self.learning_rate = tf.Variable(float(learning_rate), trainable=False)
+        self.learning_rate_decaying_unit = tf.constant(0.5)
+        self.learning_rate_update = tf.assign(learning_rate,
+                                              tf.multiply(self.learning_rate,
+                                                          self.learning_rate_decaying_unit))
         self.reward_gamma = reward_gamma
         self.g_params = []
         self.d_params = []
@@ -123,12 +127,10 @@ class Generator(object):
         outputs = sess.run(self.gen_x)
         return outputs
 
-    def save_variables(self, sess, path, step):
-        saver = tf.train.Saver()
+    def save_variables(self, sess, path, step, saver):
         saver.save(sess, path, global_step=step)
 
-    def restore_variables(self, sess, path):
-        saver = tf.train.Saver()
+    def restore_variables(self, sess, path, saver):
         saver.restore(sess, path)
 
 

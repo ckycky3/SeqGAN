@@ -131,27 +131,30 @@ def main():
 
     print strftime("%Y-%m-%d %H:%M:%S", localtime())
     log = open('save/experiment-log.txt', 'w')
+    saver = tf.train.Saver()
 
-    #  # pre-train generator
-    # print 'Start pre-training...'
-    # log.write('pre-training...\n')
-    # for epoch in xrange(FLAGS.GEN_PRE_EPOCH_NUM):
-    #     loss = pre_train_epoch(sess, generator, gen_data_loader)
-    #
-    #     if epoch % 10 == 0:
-    #         print 'pre-train epoch ', epoch, 'test_loss ', loss
-    #         buffer = 'epoch:\t' + str(epoch) + '\tnll:\t' + str(loss) + '\n'
-    #         log.write(buffer)
-    #         if epoch % 50 == 0:
-    #             file_dir = 'target_generate/pretrain_single_larger/'
-    #             file_name = 'pretrain_epoch' + str(epoch) + '.pkl'
-    #             generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_dir, file_name)
-    #             likelihood_data_loader.create_batches(file_dir+file_name)
-    #             if not gfile.Exists(FLAGS.pretrain_ckpt_dir):
-    #                 gfile.MakeDirs(FLAGS.pretrain_ckpt_dir)
-    #             generator.save_variables(sess, FLAGS.pretrain_ckpt_dir, epoch)
+     # pre-train generator
+    print 'Start pre-training...'
+    log.write('pre-training...\n')
+    for epoch in xrange(FLAGS.GEN_PRE_EPOCH_NUM):
+        loss = pre_train_epoch(sess, generator, gen_data_loader)
 
-    generator.restore_variables(sess, FLAGS.pretrain_ckpt_dir)
+        if epoch % 10 == 0:
+            print 'pre-train epoch ', epoch, 'test_loss ', loss
+            buffer = 'epoch:\t' + str(epoch) + '\tnll:\t' + str(loss) + '\n'
+            log.write(buffer)
+            if epoch % 50 == 0:
+                sess.run(generator.learning_rate_update)
+
+                file_dir = 'target_generate/pretrain_single_larger/'
+                file_name = 'pretrain_epoch' + str(epoch) + '.pkl'
+                generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_dir, file_name)
+                likelihood_data_loader.create_batches(file_dir+file_name)
+                if not gfile.Exists(FLAGS.pretrain_ckpt_dir):
+                    gfile.MakeDirs(FLAGS.pretrain_ckpt_dir)
+                generator.save_variables(sess, FLAGS.pretrain_ckpt_dir, epoch, saver)
+
+    generator.restore_variables(sess, FLAGS.pretrain_ckpt_dir, saver)
 
     # print 'Start pre-training discriminator...'
     # # Train 3 epoch on the generated data and do this for 50 times
@@ -192,7 +195,7 @@ def main():
         # Test
         if total_batch % 5 == 0 or total_batch == FLAGS.RL_ITER_NUM - 1:
             file_dir = 'target_generate/'
-            file_name = 'rollout_epoch' + str(total_batch) + '.pkl'
+            file_name = 'rollout_iter' + str(total_batch) + '.pkl'
             generate_samples(sess, generator, FLAGS.GEN_BATCH_SIZE, FLAGS.sample_num, file_dir, file_name)
             likelihood_data_loader.create_batches(file_dir+file_name)
             test_loss = target_loss(sess, generator, likelihood_data_loader)
@@ -201,7 +204,7 @@ def main():
             log.write(buffer)
             if not gfile.Exists(FLAGS.rollout_ckpt_dir):
                 gfile.MakeDirs(FLAGS.rollout_ckpt_dir)
-            generator.save_variables(sess, FLAGS.rollout_ckpt_dir, total_batch)
+            generator.save_variables(sess, FLAGS.rollout_ckpt_dir, total_batch, saver)
 
         # Update roll-out parameters
         rollout.update_params()
