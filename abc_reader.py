@@ -262,8 +262,8 @@ class ABC_Reader:
                 trans_list_raw.append(trans_fh[eos_index[i-1]:eos_index[i]])
         trans_list_raw.append(trans_fh[eos_index[i]:])
 
-        for trans in trans_list_raw:
-            print len(trans)
+        # for trans in trans_list_raw:
+        #     print len(trans)
 
         trans_list = []
         for trans in trans_list_raw:

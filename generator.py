@@ -14,7 +14,7 @@ class Generator(object):
         self.start_token = tf.constant([start_token] * self.batch_size, dtype=tf.int32)
         self.learning_rate = tf.Variable(float(learning_rate), trainable=False)
         self.learning_rate_decaying_unit = tf.constant(0.5)
-        self.learning_rate_update = tf.assign(learning_rate,
+        self.learning_rate_update = tf.assign(self.learning_rate,
                                               tf.multiply(self.learning_rate,
                                                           self.learning_rate_decaying_unit))
         self.reward_gamma = reward_gamma
