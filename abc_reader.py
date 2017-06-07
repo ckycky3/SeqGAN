@@ -3,6 +3,7 @@ import pandas as pd
 import pickle
 import re
 from collections import OrderedDict
+from tensorflow.python.platform import gfile
 
 class ABC_Reader:
 
@@ -222,6 +223,9 @@ class ABC_Reader:
         paths_postfix = '_'+self.mode+'_'+path_header+'.pkl'
 
         note_info_path = self.note_info_path_prefix+paths_postfix
+
+        if not gfile.Exists('save'):
+            gfile.MakeDirs('save')
 
         with open(note_info_path, "w") as openfile:
             pickle.dump(self.note_info_dict, openfile)
